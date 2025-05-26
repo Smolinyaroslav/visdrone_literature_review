@@ -1,0 +1,957 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Real-Time Object Detection for Aerial Surveillance on Edge benchmarked on the VisDrone2019 Dataset – A Literature Review and Analysis</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #F3F4F6;
+        }
+        .chart-container {
+            position: relative; width: 100%; max-width: 850px;
+            margin-left: auto; margin-right: auto;
+            height: 500px; max-height: 550px;
+        }
+        .quantization-chart-container, .inference-bubble-chart-container {
+            position: relative; width: 100%; max-width: 700px; /* Unified max-width */
+            margin-left: auto; margin-right: auto;
+            height: 450px; /* Increased height for better visibility */
+            max-height: 500px;
+        }
+        .large-chart-container {
+            position: relative; width: 100%; max-width: 950px;
+            margin-left: auto; margin-right: auto;
+            height: 600px; max-height: 650px;
+        }
+        @media (min-width: 768px) {
+            .chart-container { height: 550px; max-height: 600px; }
+            .quantization-chart-container { height: 450px; max-height: 500px; }
+            .inference-bubble-chart-container { height: 500px; max-height: 550px; } /* Adjusted for better layout */
+            .large-chart-container { height: 650px; max-height: 700px; }
+        }
+        .stat-card {
+            background-color: #FFFFFF; border-radius: 0.5rem;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+            padding: 1.5rem; text-align: center;
+        }
+        .stat-value { font-size: 2.25rem; font-weight: 700; color: #3B82F6; }
+        .stat-label { font-size: 0.875rem; color: #4B5563; margin-top: 0.5rem; }
+        .flow-step {
+            background-color: #E0E7FF; border: 1px solid #C7D2FE;
+            padding: 1rem; border-radius: 0.375rem; text-align: center;
+            color: #3730A3; font-weight: 500;
+        }
+        .flow-arrow { font-size: 1.5rem; color: #6B7280; align-self: center; }
+        .section-intro-text { font-size: 1.125rem; line-height: 1.75rem; color: #374151; }
+        .chart-title { font-size: 1.25rem; font-weight: 600; color: #111827; margin-bottom: 1rem; text-align: center; }
+        .chart-accompanying-text { font-size: 0.95rem; line-height: 1.65rem; color: #4B5563; margin-top: 1rem; }
+        h1, h2, h3 { color: #111827; }
+        p { color: #374151; line-height: 1.65; }
+        .card {
+             background-color: #FFFFFF; border-radius: 0.5rem;
+             box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+             padding: 1.5rem; margin-bottom: 1.5rem;
+        }
+        .toggle-controls {
+            margin-bottom: 1.5rem; padding: 1rem; background-color: #E5E7EB;
+            border-radius: 0.375rem; display: flex; flex-wrap: wrap;
+            gap: 1rem; justify-content: center;
+        }
+        .toggle-controls label {
+            display: flex; align-items: center; font-size: 0.875rem;
+            color: #374151; cursor: pointer;
+        }
+        .toggle-controls input[type="radio"] {
+            margin-right: 0.5rem; height: 1rem; width: 1rem;
+            border-radius: 0.25rem; border-color: #9CA3AF;
+            color: #3B82F6;
+        }
+        .detailed-text { font-size: 1rem; line-height: 1.7; color: #4B5563; }
+        .detailed-text strong { color: #1F2937; }
+        .detailed-text ul { list-style-type: disc; margin-left: 1.5rem; margin-top: 0.5rem;}
+        .bibliography-item {
+            font-size: 0.9rem;
+            line-height: 1.6;
+            margin-bottom: 0.75rem;
+            padding-left: 2.5rem; /* Space for the number */
+            position: relative;
+        }
+        .bibliography-item::before {
+            content: attr(data-number);
+            position: absolute;
+            left: 0;
+            top: 0;
+            font-weight: 600;
+            color: #3B82F6; /* Blue color for numbers */
+        }
+        .bibliography-container {
+            background-color: #FFFFFF;
+            border-radius: 0.5rem;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+            padding: 2rem;
+        }
+        .show-more-btn {
+            background-color: #3B82F6;
+            color: white;
+            padding: 0.5rem 1rem;
+            border-radius: 0.375rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: background-color 0.2s;
+            display: block;
+            margin: 1.5rem auto 0;
+            border: none;
+        }
+        .show-more-btn:hover {
+            background-color: #2563EB;
+        }
+        .task-card {
+            background-color: #E0E7FF; /* Light indigo background */
+            border: 1px solid #C7D2FE; /* Slightly darker indigo border */
+            border-radius: 0.5rem;
+            padding: 1.5rem;
+            text-align: center;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: flex-start; /* Align items to the top */
+            min-height: 180px; /* Ensure cards have a consistent height */
+        }
+        .task-icon {
+            font-size: 2.5rem; /* Larger icon */
+            margin-bottom: 0.75rem;
+            color: #4338CA; /* Darker indigo for icon */
+        }
+        .task-title {
+            font-weight: 600;
+            color: #3730A3; /* Indigo text */
+            margin-bottom: 0.5rem;
+            font-size: 1.1rem;
+        }
+        .task-description {
+            font-size: 0.875rem;
+            color: #4B5563; /* Gray text for description */
+            line-height: 1.5;
+        }
+
+    </style>
+</head>
+<body class="antialiased">
+
+    <header class="bg-gradient-to-r from-blue-600 to-purple-600 text-white py-12 sm:py-16 px-4 sm:px-6 lg:px-8">
+        <div class="max-w-4xl mx-auto text-center">
+            <h1 class="text-3xl sm:text-4xl lg:text-5xl font-bold tracking-tight">Real-Time Object Detection for Aerial Surveillance on Edge benchmarked on the VisDrone2019 Dataset – A Literature Review and Analysis</h1>
+            <p class="mt-3 text-lg sm:text-xl text-blue-200">Smolin Y.S., Liskin V.O.</p>
+            <p class="mt-1 text-sm sm:text-base text-blue-300">National Technical University of Ukraine “Igor Sikorsky Kyiv Polytechnic Institute”</p>
+            <p class="mt-6 max-w-2xl mx-auto text-lg text-blue-100">
+               This literature review presents a critical synthesis of recent deep-learning object-detection models benchmarked on the VisDrone2019-DET dataset, with a specific emphasis on real-time performance and computational efficiency for unmanned-aerial-vehicle (UAV) edge deployment. A comparative meta-analysis of more than 60 peer-reviewed and pre-print models quantifies the speed–accuracy trade-off using mean Average Precision (mAP), parameter count and floating-point operations (FLOPs). Results reveal that customized YOLO variants (e.g., SL-YOLO, EDNet) and efficiency-oriented DETR derivatives (e.g., VRF-DETR) currently occupy the Pareto frontier, achieving mAP@0.50 values above 50 % while maintaining sub-15 M parameters and <60 GFLOPs—indicative of suitability for Jetson-class hardware. Beyond architecture choice, we reviewed deployment strategies which can cut model size by up to 8× and boost edge inference throughput by 2-3× with minimal accuracy loss. The review concludes by mapping unresolved research gaps and outlines promising directions.
+            </p>
+        </div>
+    </header>
+
+    <main class="max-w-7xl mx-auto py-12 px-4 sm:px-6 lg:px-8">
+
+        <section class="mb-12">
+            <div class="bg-white rounded-lg shadow-lg overflow-hidden">
+                <img src="https://www.researchgate.net/publication/373053722/figure/fig9/AS:11431281211945509@1702521269834/Some-examples-of-detection-results-on-the-VisDrone-dataset-using-YOLO-DCTI.tif" alt="VisDrone Dataset Examples" class="w-full h-auto object-cover" onerror="this.onerror=null; this.src='https://placehold.co/800x400/cccccc/333333?text=VisDrone+Dataset+Example';">
+                <p class="text-center text-sm text-gray-600 py-3 px-4">Examples from the VisDrone dataset, showcasing diverse aerial scenarios and object categories.</p>
+            </div>
+        </section>
+
+        <section class="mb-16 card">
+            <h2 class="text-3xl font-bold text-center mb-6">Key Drone Tasks Leveraging Object Detection</h2>
+            <p class="section-intro-text text-center max-w-3xl mx-auto mb-8">
+                Object detection empowers UAVs to perform a wide array of sophisticated tasks by identifying and locating objects in real-time. This capability is crucial for automation, safety, and efficiency across numerous applications.
+            </p>
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                <div class="task-card">
+                    <div class="task-icon">🎯</div>
+                    <h3 class="task-title">Target Following</h3>
+                    <p class="task-description">Autonomously track designated persons, vehicles, or objects.</p>
+                </div>
+                <div class="task-card">
+                    <div class="task-icon">✈️🗺️</div>
+                    <h3 class="task-title">Autonomous Navigation</h3>
+                    <p class="task-description">Detect obstacles, runways, or safe landing zones for precise movement.</p>
+                </div>
+                <div class="task-card">
+                    <div class="task-icon">👁️⏱️</div>
+                    <h3 class="task-title">Object Tracking</h3>
+                    <p class="task-description">Continuously monitor specific objects for surveillance or monitoring.</p>
+                </div>
+                <div class="task-card">
+                    <div class="task-icon">🧑‍⚕️🔍</div>
+                    <h3 class="task-title">Search & Rescue</h3>
+                    <p class="task-description">Locate missing persons or signs of distress in large/inaccessible areas.</p>
+                </div>
+                <div class="task-card">
+                    <div class="task-icon">🏗️🌉</div>
+                    <h3 class="task-title">Infrastructure Inspection</h3>
+                    <p class="task-description">Identify defects or anomalies on structures like bridges and power lines.</p>
+                </div>
+                <div class="task-card">
+                    <div class="task-icon">🌿🚜</div>
+                    <h3 class="task-title">Precision Agriculture</h3>
+                    <p class="task-description">Monitor crops, identify weeds/disease, and track livestock.</p>
+                </div>
+                <div class="task-card lg:col-start-2 lg:col-span-1 sm:col-span-2"> <div class="task-icon">🚗🚦</div>
+                    <h3 class="task-title">Traffic Monitoring</h3>
+                    <p class="task-description">Identify vehicles, count traffic, and detect incidents for safety.</p>
+                </div>
+            </div>
+            <p class="section-intro-text text-center max-w-3xl mx-auto mt-8">
+                The success of these applications hinges on accurate, fast, and robust onboard object detection models, especially on resource-constrained UAVs.
+            </p>
+        </section>
+
+
+        <section class="mb-16">
+            <h2 class="text-3xl font-bold text-center mb-4">The UAV AI Challenge: Seeing Clearly on the Edge</h2>
+            <p class="section-intro-text text-center max-w-3xl mx-auto mb-10">
+                Deploying advanced AI on drones presents unique hurdles related to power, processing, and memory. For tasks like surveillance, they need to identify objects – often small or occluded – in real-time from high-resolution aerial imagery. The VisDrone dataset serves as a crucial benchmark.
+            </p>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div class="stat-card"><div class="stat-value">⚡</div><div class="stat-label">Limited Power & Compute</div><p class="text-xs text-gray-500 mt-1">Models must be lightweight.</p></div>
+                <div class="stat-card"><div class="stat-value">🎯</div><div class="stat-label">Small, Dense Objects</div><p class="text-xs text-gray-500 mt-1">Aerial views feature tiny targets.</p></div>
+                <div class="stat-card"><div class="stat-value">⏱️</div><div class="stat-label">Real-Time Processing</div><p class="text-xs text-gray-500 mt-1">Instantaneous detection is vital.</p></div>
+            </div>
+        </section>
+
+        <section class="mb-16">
+            <h2 class="text-3xl font-bold text-center mb-4">Measuring Performance: Key Indicators</h2>
+            <p class="section-intro-text text-center max-w-3xl mx-auto mb-10">
+                To evaluate a model's suitability for edge deployment, we focus on a balance of accuracy and efficiency using three primary metrics:
+            </p>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+                <div class="stat-card"><div class="stat-value">mAP</div><div class="stat-label">Mean Average Precision</div><p class="text-xs text-gray-500 mt-1">Measures accuracy. Higher is better.</p></div>
+                <div class="stat-card"><div class="stat-value">Params</div><div class="stat-label">Parameter Count</div><p class="text-xs text-gray-500 mt-1">Indicates model size. Lower is better.</p></div>
+                <div class="stat-card"><div class="stat-value">GFLOPs</div><div class="stat-label">Giga Floating-Point Operations</div><p class="text-xs text-gray-500 mt-1">Estimates computational cost. Lower is better.</p></div>
+            </div>
+        </section>
+        <section class="mb-16">
+            <h2 class="text-3xl font-bold text-center mb-4">Comprehensive Model Overview: The Efficiency Landscape</h2>
+            <p class="section-intro-text text-center max-w-3xl mx-auto mb-10">
+                This interactive visualization plots a wide array of models based on their accuracy (mAP@0.50), computational cost (GFLOPs), and size (Parameters).
+            </p>
+            <div class="card">
+                 <h3 class="chart-title">All Models: mAP vs. GFLOPs (Bubble Size: Parameters M)</h3>
+                 <div id="allModelsToggleControls" class="toggle-controls">
+                    <label><input type="radio" name="bubbleView" value="all" checked> Show All Models</label>
+                    <label><input type="radio" name="bubbleView" value="pareto"> Show Pareto Optimal Only</label>
+                 </div>
+                <div class="large-chart-container">
+                    <canvas id="allModelsOverviewChart"></canvas>
+                </div>
+                <p class="chart-accompanying-text">
+                    This bubble chart presents numerous models from a broader dataset. Models positioned towards the top-left quadrant are generally more efficient. Selecting "Pareto Optimal Only" highlights models that offer an optimal balance of mAP, GFLOPs, and Parameters.
+                </p>
+            </div>
+        </section>
+        <section class="mb-16">
+            <h2 class="text-3xl font-bold text-center mb-4">Leading Architectures: Comparative View</h2>
+            <p class="section-intro-text text-center max-w-3xl mx-auto mb-10">
+                This interactive chart compares various object detection models across mAP@0.50, Parameter count, and GFLOPs. Use the radio buttons to view all models or only the Pareto optimal ones. Pareto optimal models offer the best trade-offs among these metrics.
+            </p>
+            <div class="card">
+                <h3 class="chart-title">All Models: mAP, Parameters & GFLOPs Comparison</h3>
+                <div id="yoloVsDetrToggleControls" class="toggle-controls">
+                    <label><input type="radio" name="yoloDetrView" value="all" checked> Show All Models</label>
+                    <label><input type="radio" name="yoloDetrView" value="pareto"> Show Pareto Optimal Models</label>
+                </div>
+                <div class="chart-container">
+                    <canvas id="yoloVsDetrChart"></canvas>
+                </div>
+                <p class="chart-accompanying-text">
+                    This chart juxtaposes various models. Observe how different models balance high accuracy (mAP) with model size (Parameters) and computational cost (GFLOPs).
+                </p>
+                </div>
+        </section>
+
+        <section class="mb-16">
+            <h2 class="text-3xl font-bold text-center mb-4">Model Quantization: Impact on Accuracy</h2>
+            <p class="section-intro-text text-center max-w-3xl mx-auto mb-10">
+                Quantization converts models from FP32 to INT8 precision to reduce size and speed up inference on edge devices. This process, however, can lead to a drop in accuracy. We analyze this impact based on data comparing FP32 mAP with INT8 Hardware Accuracy from the provided dataset.
+            </p>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8">
+                <div class="stat-card">
+                    <div class="stat-value" id="yoloAvgLoss">--%</div>
+                    <div class="stat-label">Avg. mAP Drop (YOLO Models)</div>
+                    <p class="text-xs text-gray-500 mt-1">Average percentage decrease in mAP after INT8 quantization for YOLO models.</p>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="detrAvgLoss">--%</div>
+                    <div class="stat-label">Avg. mAP Drop (DETR Models)</div>
+                    <p class="text-xs text-gray-500 mt-1">Average percentage decrease in mAP after INT8 quantization for DETR models.</p>
+                </div>
+            </div>
+            <div class="card">
+                <h3 class="chart-title">FP32 mAP vs. INT8 Hardware Accuracy</h3>
+                <div class="quantization-chart-container">
+                    <canvas id="quantizationImpactChart"></canvas>
+                </div>
+                <p class="chart-accompanying-text">
+                    This chart shows the original FP32 mAP alongside the INT8 Hardware Accuracy for selected models from the dataset. The difference illustrates the accuracy trade-off during quantization. Note that `HW_Accuracy_minus_mAP` from the source data represents the *drop* in mAP.
+                </p>
+            </div>
+        </section>
+
+        <section class="mb-16">
+            <h2 class="text-3xl font-bold text-center mb-4">Estimating Inference Time from GFLOPs</h2>
+            <p class="section-intro-text text-center max-w-3xl mx-auto mb-10">
+                This section visualizes the relationship between GFLOPs (OPS_G from the dataset) and Inference Time (ms) for models.
+                Since parameter data is not available in the current dataset, models are shown as points of uniform size. A linear regression line and its R² value adapt to the selected filter.
+            </p>
+            <div class="card">
+                <h3 class="chart-title" id="inferenceTimeChartTitle">YOLO & DETR Models: Inference Time vs. GFLOPs</h3>
+                 <div id="inferenceTimeToggleControls" class="toggle-controls">
+                    <label><input type="radio" name="inferenceTimeView" value="all" checked> All YOLO & DETR</label>
+                    <label><input type="radio" name="inferenceTimeView" value="yolo"> YOLO Only</label>
+                    <label><input type="radio" name="inferenceTimeView" value="detr"> DETR Only</label>
+                    <label><input type="radio" name="inferenceTimeView" value="yolov11"> YOLOv11 Only</label>
+                 </div>
+                <div class="inference-bubble-chart-container">
+                    <canvas id="combinedInferenceBubbleChart"></canvas>
+                </div>
+                <p class="text-center mt-4 text-sm text-gray-700" id="combinedInferenceR2">R²: Calculating...</p>
+            </div>
+        </section>
+
+
+
+        <section class="mb-16">
+            <h2 class="text-3xl font-bold text-center mb-4">Optimizing for the Edge: Other Key Strategies</h2>
+            <p class="section-intro-text text-center max-w-3xl mx-auto mb-10">
+                Beyond quantization, other techniques are vital for deploying efficient and accurate models on UAVs. These strategies help manage computational resources and improve detection performance in challenging aerial scenarios.
+            </p>
+             <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 mt-8">
+                <div class="card">
+                    <h3 class="text-xl font-semibold mb-3 text-purple-600">Pruning Techniques</h3>
+                    <div class="detailed-text">
+                        <p><strong>Pruning</strong> aims to reduce model complexity by removing redundant components. This leads to smaller model sizes, fewer FLOPs, and potentially faster inference.</p>
+                        <ul>
+                            <li><strong>Unstructured Pruning:</strong> Removes individual weights, leading to sparse models that may require specialized hardware/software for speedups.</li>
+                            <li><strong>Structured Pruning:</strong> Removes entire filters, channels, or layers. This results in smaller, dense models that are more readily accelerated on standard hardware.</li>
+                        </ul>
+                        <p class="mt-2">The challenge lies in pruning aggressively without significant accuracy loss, often requiring careful fine-tuning post-pruning.</p>
+                    </div>
+                </div>
+                <div class="card">
+                    <h3 class="text-xl font-semibold mb-3 text-green-600">Knowledge Distillation (KD)</h3>
+                     <div class="detailed-text">
+                        <p><strong>Knowledge Distillation</strong> is a model compression technique where a compact "student" model learns to mimic the behavior of a larger, more accurate "teacher" model.</p>
+                        <ul>
+                            <li>This is particularly beneficial for creating lightweight models that retain much of the performance of their larger counterparts.</li>
+                            <li>Specialized KD methods are being developed for aerial imagery to better handle small objects and noisy features, such as focusing distillation on relevant feature map layers or using instance-aware region selection.</li>
+                        </ul>
+                    </div>
+                </div>
+                <div class="card lg:col-span-1 md:col-span-2"> <h3 class="text-xl font-semibold mb-3 text-blue-600">Input Handling: SAHI</h3>
+                    <div class="detailed-text">
+                        <p><strong>Slicing Aided Hyper Inference (SAHI)</strong> addresses the challenge of detecting small objects in high-resolution aerial images.</p>
+                        <ul>
+                            <li>It works by dividing the large input image into smaller, often overlapping, patches.</li>
+                            <li>The object detector then runs inference on each patch independently.</li>
+                            <li>The detections from all patches are subsequently merged to produce the final output for the full image.</li>
+                        </ul>
+                        <p class="mt-2">SAHI is model-agnostic and can be combined with Slicing-Aided Fine-tuning (SF) for further performance gains. While it improves small object detection significantly, it increases the overall inference time due to multiple forward passes.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section class="mb-16">
+            <h2 class="text-3xl font-bold text-center mb-4">Future Horizons: The Next Generation of Drone Vision</h2>
+            <p class="section-intro-text text-center max-w-3xl mx-auto mb-10">
+                The field of real-time object detection for UAVs is rapidly advancing. Future research is poised to deliver even more capable and efficient solutions by focusing on several key areas:
+            </p>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                <div class="card">
+                    <h3 class="text-lg font-semibold text-blue-600 mb-2">Novel Lightweight Architectures</h3>
+                    <p class="detailed-text">Continued innovation in designing neural network backbones, necks, and detection heads optimized for aerial imagery, focusing on efficient operations and handling scale variations.</p>
+                </div>
+                <div class="card">
+                    <h3 class="text-lg font-semibold text-blue-600 mb-2">Neural Architecture Search (NAS)</h3>
+                    <p class="detailed-text">Automated discovery of optimal network architectures for specific edge hardware, balancing latency, memory, and power constraints.</p>
+                </div>
+                <div class="card">
+                    <h3 class="text-lg font-semibold text-blue-600 mb-2">Energy-Aware Systems</h3>
+                    <p class="detailed-text">Developing algorithms and system strategies that explicitly model and optimize for energy consumption during UAV operations to maximize mission endurance.</p>
+                </div>
+                 <div class="card">
+                    <h3 class="text-lg font-semibold text-blue-600 mb-2">Advanced Feature Fusion</h3>
+                    <p class="detailed-text">Researching sophisticated techniques for integrating information from different network layers to improve detection of multi-scale and occluded objects.</p>
+                </div>
+                 <div class="card">
+                    <h3 class="text-lg font-semibold text-blue-600 mb-2">Data-Efficient Learning</h3>
+                    <p class="detailed-text">Investigating methods like self-supervised, semi-supervised, and weakly-supervised learning to reduce reliance on large-scale annotated datasets.</p>
+                </div>
+                 <div class="card">
+                    <h3 class="text-lg font-semibold text-blue-600 mb-2">Transformer Optimizations for Edge</h3>
+                    <p class="detailed-text">Adapting and optimizing Transformer-based architectures for efficient edge deployment through techniques like sparse attention and specialized quantization.</p>
+                </div>
+            </div>
+        </section>
+
+        <section class="mb-16 bibliography-container">
+            <h2 class="text-3xl font-bold text-center mb-8">Bibliography</h2>
+            <div id="bibliographyList">
+                </div>
+            <button id="toggleBibliography" class="show-more-btn">Show More</button>
+        </section>
+
+
+        <section class="bg-gray-800 text-white py-16 px-4 sm:px-6 lg:px-8 rounded-lg">
+            <div class="max-w-3xl mx-auto text-center">
+                <h2 class="text-3xl font-bold mb-6">Pioneering the Future of Autonomous Aerial Systems</h2>
+                <p class="text-lg text-gray-300 mb-6">
+                    Continuous innovation is paving the way for more sophisticated, reliable, and autonomous aerial systems.
+                </p>
+            </div>
+        </main>
+
+    <footer class="text-center py-8 text-sm text-gray-500">
+        Infographic based on research into Real-Time Object Detection for Aerial Surveillance on Edge.
+        All visualizations are for illustrative purposes. No SVG or Mermaid JS used.
+    </footer>
+
+    <script>
+    const chartJsBaseConfig = {
+        plugins: {
+            legend: { labels: { color: '#4B5563', font: { size: 12 }}},
+            tooltip: { callbacks: { title: function(tooltipItems) {
+                const item = tooltipItems[0]; let label = item.chart.data.labels[item.dataIndex];
+                return Array.isArray(label) ? label.join(' ') : label;
+            }}}
+        },
+        responsive: true, maintainAspectRatio: false
+    };
+
+    function wrapLabel(label, maxLength = 14) {
+        if (!label) return ['Unknown'];
+        const labelStr = String(label);
+        if (labelStr.length <= maxLength) return labelStr;
+        const words = labelStr.split(' '); let currentLine = ''; const lines = [];
+        for (const word of words) {
+            if ((currentLine + word).length > maxLength && currentLine.length > 0) {
+                lines.push(currentLine.trim()); currentLine = '';
+            }
+            currentLine += word + ' ';
+        }
+        if (currentLine.trim().length > 0) lines.push(currentLine.trim());
+        return lines.length > 0 ? lines : [labelStr];
+    }
+
+    const allModelsData_RAW = [ // This dataset is for the "Comprehensive Model Overview" chart and includes 'params'
+        { label: "Drone-DETR", map: 53.9, params: 28.7, gflops: 128.3, type: "DETR" },
+        { label: "VRF-DETR", map: 51.4, params: 13.5, gflops: 44.3, type: "DETR" },
+        { label: "UAV-DETR-R50", map: 51.1, params: 42.0, gflops: 170, type: "DETR" },
+        { label: "RT-DETR-R50", map: 50.7, params: 41.8, gflops: 133.2, type: "DETR" },
+        { label: "EDNet-X", map: 50.2, params: 48.7, gflops: 270.4, type: "YOLO/EDNet" },
+        { label: "DBYOLOv8s", map: 49.3, params: 11, gflops: 119.8, type: "YOLO/EDNet" },
+        { label: "EDNet-L", map: 49.0, params: 31.7, gflops: 179.2, type: "YOLO/EDNet" },
+        { label: "Wang et al.", map: 48.3, params: 31.2, gflops: 490.9, type: "Other" },
+        { label: "EDNet-B", map: 48.3, params: 25.5, gflops: 141.1, type: "YOLO/EDNet" },
+        { label: "RT-DETR-R18", map: 47.2, params: 20.2, gflops: 57.0, type: "DETR" },
+        { label: "EDNet-M", map: 47.1, params: 19.1, gflops: 88.4, type: "YOLO/EDNet" },
+        { label: "SL-YOLO", map: 46.9, params: 9.6, gflops: 36.7, type: "YOLO/EDNet" },
+        { label: "YOLOv9e", map: 46.5, params: 57.4, gflops: 189.0, type: "YOLO/EDNet" },
+        { label: "LSOD-YOLOv8s", map: 45.2, params: 2.7, gflops: 23.5, type: "YOLO/EDNet" },
+        { label: "MSGD-YOLO", map: 45.2, params: 2.6, gflops: 21.5, type: "YOLO/EDNet" },
+        { label: "YOLOv10x", map: 44.8, params: 31.6, gflops: 160.4, type: "YOLO/EDNet" },
+        { label: "YOLOv5x", map: 44.7, params: 97.2, gflops: 205.7, type: "YOLO/EDNet" },
+        { label: "YOLOv8x", map: 44.7, params: 68.1, gflops: 257.8, type: "YOLO/EDNet" },
+        { label: "YOLOv5s VIOU+PFFN+ADhead", map: 44.6, params: 19.26, gflops: 112.6, type: "YOLO/EDNet" },
+        { label: "HIC-YOLOv5", map: 44.3, params: 10.5, gflops: 31.2, type: "YOLO/EDNet" },
+        { label: "YOLOv10l", map: 44.3, params: 25.7, gflops: 120.3, type: "YOLO/EDNet" },
+        { label: "YOLOv8l", map: 43.6, params: 43.6, gflops: 165.2, type: "YOLO/EDNet" },
+        { label: "YOLOv10-B", map: 43.4, params: 20.4, gflops: 92, type: "YOLO/EDNet" },
+        { label: "YOLOv5s VIOU+PFFN", map: 43.2, params: 7.4, gflops: 39.6, type: "YOLO/EDNet" },
+        { label: "YOLOv9m", map: 43.1, params: 20.0, gflops: 76.3, type: "YOLO/EDNet" },
+        { label: "YOLOv9-C", map: 43.1, params: 25.3, gflops: 102.1, type: "YOLO/EDNet" },
+        { label: "YOLOv12-M", map: 43.1, params: 20.2, gflops: 67.5, type: "YOLO/EDNet" },
+        { label: "CPAM-YOLO", map: 43.0, params: 27.5, gflops: 106.4, type: "YOLO/EDNet" },
+        { label: "YOLOv5l", map: 42.9, params: 53.1, gflops: 109.1, type: "YOLO/EDNet" },
+        { label: "EDNet-S", map: 42.5, params: 9.3, gflops: 37.1, type: "YOLO/EDNet" },
+        { label: "Li et al.", map: 42.2, params: 9.6, gflops: 22, type: "Other" },
+        { label: "YOLOv8m", map: 41.9, params: 25.9, gflops: 78.9, type: "YOLO/EDNet" },
+        { label: "DM-YOLOX", map: 41.9, params: 9.6, gflops: 27.9, type: "YOLO/EDNet" },
+        { label: "LV-YOLOv5s", map: 41.7, params: 36.6, gflops: 38.8, type: "YOLO/EDNet" },
+        { label: "YOLOv10m", map: 41.5, params: 16.5, gflops: 59.1, type: "YOLO/EDNet" },
+        { label: "PDWT-YOLO", map: 41.2, params: 6.4, gflops: 24.2, type: "YOLO/EDNet" },
+        { label: "YOLOv5m", map: 41.1, params: 21.2, gflops: 49, type: "YOLO/EDNet" },
+        { label: "UN-YOLOv5s", map: 40.5, params: 9.1, gflops: 37.4, type: "YOLO/EDNet" },
+        { label: "LAI-YOLOv5s", map: 40.4, params: 6.3, gflops: 29.0, type: "YOLO/EDNet" },
+        { label: "YOLOv9s", map: 39.0, params: 7.2, gflops: 26.4, type: "YOLO/EDNet" },
+        { label: "YOLOv8s", map: 38.9, params: 11.1, gflops: 28.5, type: "YOLO/EDNet" },
+        { label: "YOLOv5s", map: 38.5, params: 9.1, gflops: 23.8, type: "YOLO/EDNet" },
+        { label: "YOLOv10s", map: 38.5, params: 8.0, gflops: 21.6, type: "YOLO/EDNet" },
+        { label: "C3TB-YOLOv5", map: 38.3, params: 8.0, gflops: 19.7, type: "YOLO/EDNet" },
+        { label: "MPE-YOLO", map: 37.0, params: 4.4, gflops: 11.9, type: "YOLO/EDNet" },
+        { label: "YOLOv8n", map: 33.2, params: 3.0, gflops: 8.1, type: "YOLO/EDNet" },
+        { label: "YOLOv10n", map: 32.3, params: 2.7, gflops: 6.7, type: "YOLO/EDNet" },
+        { label: "EDNet-Tiny", map: 33.3, params: 1.8, gflops: 14.2, type: "YOLO/EDNet" },
+    ];
+
+    function getParetoOptimalModels(models) {
+        return models.filter(candidate => {
+            return !models.some(other => {
+                if (candidate.label === other.label) return false;
+                const otherBetterMAP = other.map > candidate.map;
+                const otherEqualMAP = other.map === candidate.map;
+                const otherBetterGFLOPs = other.gflops < candidate.gflops;
+                const otherEqualGFLOPs = other.gflops === candidate.gflops;
+                const otherBetterParams = other.params < candidate.params;
+                const otherEqualParams = other.params === candidate.params;
+                const betterOnAtLeastOne = otherBetterMAP || otherBetterGFLOPs || otherBetterParams;
+                const notWorseOnAny = (otherBetterMAP || otherEqualMAP) &&
+                                      (otherBetterGFLOPs || otherEqualGFLOPs) &&
+                                      (otherBetterParams || otherEqualParams);
+                return betterOnAtLeastOne && notWorseOnAny;
+            });
+        });
+    }
+
+    const yoloVsDetrModels_ForChart = allModelsData_RAW.map(m => ({ ...m, id: m.label.replace(/[^a-zA-Z0-9]/g, '') }));
+
+    let yoloVsDetrChartInstance;
+
+    function updateYoloVsDetrChart(showParetoOnly = false) {
+        const modelsToDisplay = showParetoOnly ? getParetoOptimalModels(yoloVsDetrModels_ForChart) : yoloVsDetrModels_ForChart;
+        yoloVsDetrChartInstance.data.labels = modelsToDisplay.map(m => wrapLabel(m.label + ' (' + m.type + ')', 20));
+        yoloVsDetrChartInstance.data.datasets[0].data = modelsToDisplay.map(m => m.map);
+        yoloVsDetrChartInstance.data.datasets[1].data = modelsToDisplay.map(m => m.params);
+        yoloVsDetrChartInstance.data.datasets[2].data = modelsToDisplay.map(m => m.gflops);
+        yoloVsDetrChartInstance.update();
+    }
+
+    yoloVsDetrChartInstance = new Chart(document.getElementById('yoloVsDetrChart'), {
+        type: 'bar',
+        data: {
+            labels: [],
+            datasets: [
+                { label: 'mAP@0.50 (%)', data: [], backgroundColor: '#3B82F6', borderColor: '#2563EB', borderWidth: 1, yAxisID: 'yMAP', order: 1 },
+                { label: 'Parameters (M)', data: [], backgroundColor: '#A78BFA', borderColor: '#8B5CF6', borderWidth: 1, yAxisID: 'yParams', order: 2 },
+                { label: 'GFLOPs', data: [], backgroundColor: '#F59E0B', borderColor: '#D97706', borderWidth: 1, yAxisID: 'yGFLOPs', order: 3 }
+            ]
+        },
+        options: {
+            ...chartJsBaseConfig,
+            scales: {
+                yMAP: { type: 'linear', position: 'left', beginAtZero: true, min: 20, title: { display: true, text: 'mAP@0.50 (%)', color: '#4B5563', font: {size: 10}}, ticks: { color: '#3B82F6', font: {size: 9} }, grid: { color: '#E5E7EB' }},
+                yParams: { type: 'linear', position: 'right', beginAtZero: true, title: { display: true, text: 'Parameters (M)', color: '#4B5563', font: {size: 10}}, ticks: { color: '#A78BFA', font: {size: 9} }, grid: { drawOnChartArea: false } },
+                yGFLOPs: { type: 'linear', position: 'right', beginAtZero: true, title: { display: true, text: 'GFLOPs', color: '#4B5563', font: {size: 10}}, ticks: { color: '#F59E0B', font: {size: 9} }, grid: { drawOnChartArea: false } },
+                x: { ticks: { color: '#4B5563', font: {size: 8}, maxRotation: 75, minRotation: 45 }, grid: { display: false }}
+            },
+            plugins: { legend: { ...chartJsBaseConfig.plugins.legend, position: 'top'}, tooltip: { ...chartJsBaseConfig.plugins.tooltip, mode: 'index', intersect: false }}
+        }
+    });
+    document.querySelectorAll('input[name="yoloDetrView"]').forEach(radio => {
+        radio.onchange = (event) => updateYoloVsDetrChart(event.target.value === 'pareto');
+    });
+    updateYoloVsDetrChart(false);
+
+    // NEW CSV data from user upload (mAP_HW_Accuracy_Comparison.csv)
+    const newDataCSV = `Network_Name_Clean,mAP,HW_Accuracy,HW_Accuracy_minus_mAP,Inference_Time_ms,OPS_G
+detr_resnet_v1_50,38.38,35.11,-3.27,100.0,120.4
+detr_resnet_v1_18_bn,33.91,31.57,-2.34,43.48,61.87
+damoyolo_tinynasL20_T,42.8,40.72,-2.08,8.06,18.02
+yolox_l_leaky,48.68,46.62,-2.06,40.0,155.3
+yolov3_gluon_416,36.27,34.22,-2.05,32.26,65.94
+damoyolo_tinynasL35_M,49.7,47.74,-1.96,19.61,61.64
+yolov6n,34.29,32.4,-1.89,2.81,11.12
+yolov10n,38.5,36.62,-1.88,6.67,6.8
+yolov10x,53.7,51.83,-1.87,71.43,160.56
+yolov5xs_wo_spp_nms_core,32.73,31.05,-1.68,17.54,11.36
+yolov7,50.6,48.92,-1.68,27.78,104.51
+yolov7e6,55.37,53.76,-1.61,166.67,515.12
+yolov3_gluon,37.28,35.77,-1.51,62.5,140.7
+tiny_yolov4,19.18,17.71,-1.47,1.12,6.92
+yolov5m_wo_spp,43.06,41.6,-1.46,16.13,52.88
+yolov5s_c3tr,37.13,35.68,-1.45,8.33,17.02
+yolov11n,39.0,37.6,-1.4,6.37,6.55
+yolox_s_wide_leaky,42.4,41.05,-1.35,15.87,59.46
+yolov5m6_6.1,50.68,49.33,-1.35,47.62,200.04
+yolox_tiny,32.64,31.29,-1.35,4.67,6.44
+yolov11m,51.1,49.77,-1.33,28.57,68.1
+yolov5m_6.1,44.74,43.49,-1.25,14.49,48.96
+damoyolo_tinynasL25_S,46.53,45.29,-1.24,12.82,37.64
+yolov5m,42.59,41.38,-1.21,16.67,52.17
+yolov4_leaky,42.37,41.17,-1.2,45.45,91.04
+yolov5s,35.33,34.14,-1.19,8.06,17.44
+yolov10b,52.0,50.82,-1.18,40.0,92.09
+yolov9c,52.6,51.43,-1.17,37.04,102.1
+yolov6n_0.2.1,35.16,34.03,-1.13,1.79,11.06
+yolov6n_0.2.1_nms_core,35.16,34.08,-1.08,5.03,11.12
+yolov5xs_wo_spp,33.18,32.11,-1.07,4.85,11.36
+yolov5s_wo_spp,34.79,33.76,-1.03,7.3,17.74
+yolov11x,54.1,53.07,-1.03,83.33,195.29
+yolov11s,46.3,45.39,-0.91,10.99,21.6
+yolov10s,45.86,44.98,-0.88,11.49,21.7
+yolox_s_leaky,38.13,37.31,-0.82,9.17,26.74
+yolov8m,49.91,49.1,-0.81,20.0,78.93
+yolov7_tiny,37.07,36.29,-0.78,6.37,13.74
+tiny_yolov3,14.66,13.93,-0.73,1.11,5.58
+yolov8l,52.44,51.76,-0.68,38.46,165.3
+yolov8n,37.02,36.42,-0.6,4.95,8.74
+yolov8s,44.58,44.01,-0.57,9.17,28.6
+yolov8x,53.45,52.88,-0.57,62.5,258.0
+yolov11l,52.8,52.31,-0.49,47.62,87.17
+yolov3_416,37.73,37.59,-0.14,30.3,65.94
+yolov3,38.42,38.29,-0.13,47.62,158.1`;
+
+    function inferFamily(modelName) {
+        const lowerModelName = modelName.toLowerCase();
+        if (lowerModelName.includes('yolo')) return 'YOLO';
+        if (lowerModelName.includes('detr')) return 'DETR';
+        return 'Other'; // Should not be strictly needed for the filtered charts
+    }
+
+    const parsedNewData = newDataCSV.split('\n').slice(1).map(row => {
+        const values = row.split(',');
+        if (values.length < 6) return null; // Expecting at least 6 columns
+        const modelName = values[0].trim();
+        return {
+            Model: modelName,
+            Family: inferFamily(modelName),
+            mAP: parseFloat(values[1]),
+            HW_Accuracy: parseFloat(values[2]),
+            HW_Accuracy_minus_mAP: parseFloat(values[3]),
+            InferenceTime: parseFloat(values[4]),
+            GFLOPs: parseFloat(values[5]),
+            // Parameters (M) is NOT in this CSV. Will use a fixed size for bubbles.
+            Parameters: 1 // Placeholder, as it's not in CSV. Chart will be scatter.
+        };
+    }).filter(d => d && d.Model && !isNaN(d.mAP) && !isNaN(d.GFLOPs) && !isNaN(d.InferenceTime) && (d.Family === "YOLO" || d.Family === "DETR"));
+
+
+    const yoloModelsFromNewData = parsedNewData.filter(d => d.Family === 'YOLO' && !isNaN(d.HW_Accuracy_minus_mAP));
+    const detrModelsFromNewData = parsedNewData.filter(d => d.Family === 'DETR' && !isNaN(d.HW_Accuracy_minus_mAP));
+
+    let yoloNewDataTotalLossPercent = 0;
+    yoloModelsFromNewData.forEach(d => { yoloNewDataTotalLossPercent += (Math.abs(d.HW_Accuracy_minus_mAP) / d.mAP) * 100; }); // Use absolute for drop
+    const yoloNewDataAvgLoss = yoloModelsFromNewData.length > 0 ? (yoloNewDataTotalLossPercent / yoloModelsFromNewData.length).toFixed(2) : 'N/A';
+    document.getElementById('yoloAvgLoss').textContent = `${yoloNewDataAvgLoss}%`;
+
+    let detrNewDataTotalLossPercent = 0;
+    detrModelsFromNewData.forEach(d => { detrNewDataTotalLossPercent += (Math.abs(d.HW_Accuracy_minus_mAP) / d.mAP) * 100; }); // Use absolute for drop
+    const detrNewDataAvgLoss = detrModelsFromNewData.length > 0 ? (detrNewDataTotalLossPercent / detrModelsFromNewData.length).toFixed(2) : 'N/A';
+    document.getElementById('detrAvgLoss').textContent = `${detrNewDataAvgLoss}%`;
+
+    // Update quantization bar chart to use the new data, up to 8 models
+    const quantizationBarChartData = parsedNewData.filter(d => !isNaN(d.HW_Accuracy_minus_mAP) && !isNaN(d.HW_Accuracy)).slice(0,8);
+    const quantizationImpactChartEl = document.getElementById('quantizationImpactChart');
+    if (Chart.getChart(quantizationImpactChartEl)) { // Destroy existing chart before re-creating
+        Chart.getChart(quantizationImpactChartEl).destroy();
+    }
+    new Chart(quantizationImpactChartEl, {
+        type: 'bar',
+        data: {
+            labels: quantizationBarChartData.map(d => wrapLabel(d.Model + ` (${d.Family})`)),
+            datasets: [
+                { label: 'FP32 mAP', data: quantizationBarChartData.map(d => d.mAP), backgroundColor: '#60A5FA', borderColor: '#3B82F6' },
+                { label: 'INT8 HW Accuracy', data: quantizationBarChartData.map(d => d.HW_Accuracy), backgroundColor: '#F87171', borderColor: '#EF4444'}
+            ]
+        },
+        options: { ...chartJsBaseConfig, scales: {
+            y: { beginAtZero: true, title: {display: true, text: 'mAP (%)', font:{size:10}}, ticks:{font:{size:9}}},
+            x: { ticks: {font:{size:9}, maxRotation:45, minRotation:45}}
+        }, plugins: { legend: { ...chartJsBaseConfig.plugins.legend, position: 'top'}}}
+    });
+
+
+    function linearRegression(data, xKey, yKey) {
+        let sumX = 0, sumY = 0, sumXY = 0, sumX2 = 0; const n = data.length;
+        if (n < 2) return { slope: 0, intercept: data.length === 1 ? data[0][yKey] : (sumY / n || 0) };
+        data.forEach(p => { sumX += p[xKey]; sumY += p[yKey]; sumXY += p[xKey] * p[yKey]; sumX2 += p[xKey] * p[xKey]; });
+        const denominator = (n * sumX2 - sumX * sumX);
+        if (denominator === 0) { // All x values are the same
+            const meanY = sumY / n;
+            return { slope: 0, intercept: meanY };
+        }
+        const slope = (n * sumXY - sumX * sumY) / denominator;
+        const intercept = (sumY - slope * sumX) / n;
+        return { slope: slope || 0, intercept: intercept || 0 };
+    }
+
+    function calculateRSquared(data, xKey, yKey, slope, intercept) {
+        if (data.length < 2) return 0;
+        const yMean = data.reduce((acc, p) => acc + p[yKey], 0) / data.length;
+        let ssTot = 0;
+        let ssRes = 0;
+        data.forEach(p => {
+            const predictedY = slope * p[xKey] + intercept;
+            ssTot += Math.pow(p[yKey] - yMean, 2);
+            ssRes += Math.pow(p[yKey] - predictedY, 2);
+        });
+        if (ssTot === 0) return (ssRes === 0) ? 1 : 0; // if all y are same, R2 is 1 if prediction is perfect, else 0
+        return Math.max(0, 1 - (ssRes / ssTot));
+    }
+
+    let combinedInferenceChartInstance;
+    const fixedBubbleRadius = 5; // Fixed radius for scatter plot points
+
+    function updateCombinedInferenceChart(filterType = 'all') {
+        const rSquaredEl = document.getElementById('combinedInferenceR2');
+        const chartTitleEl = document.getElementById('inferenceTimeChartTitle');
+        let dataToDisplay;
+        let regressionLabel = "Regression Line";
+        let currentChartTitle = "Models: Inference Time vs. GFLOPs";
+
+        switch (filterType) {
+            case 'yolo':
+                dataToDisplay = parsedNewData.filter(d => d.Family === 'YOLO');
+                regressionLabel = "Regression (YOLO)";
+                currentChartTitle = "YOLO Models: Inference Time vs. GFLOPs";
+                break;
+            case 'detr':
+                dataToDisplay = parsedNewData.filter(d => d.Family === 'DETR');
+                regressionLabel = "Regression (DETR)";
+                currentChartTitle = "DETR Models: Inference Time vs. GFLOPs";
+                break;
+            case 'yolov11':
+                dataToDisplay = parsedNewData.filter(d => d.Model.toLowerCase().includes('yolov11') && d.Family === 'YOLO');
+                regressionLabel = "Regression (YOLOv11)";
+                currentChartTitle = "YOLOv11 Models: Inference Time vs. GFLOPs";
+                break;
+            case 'all':
+            default:
+                dataToDisplay = parsedNewData.filter(d => d.Family === 'YOLO' || d.Family === 'DETR');
+                regressionLabel = "Regression (All Displayed)";
+                currentChartTitle = "YOLO & DETR Models: Inference Time vs. GFLOPs";
+                break;
+        }
+        if(chartTitleEl) chartTitleEl.textContent = currentChartTitle;
+
+
+        if (!dataToDisplay || dataToDisplay.length === 0) {
+            if(rSquaredEl) rSquaredEl.textContent = `R²: No data for filter: ${filterType}.`;
+            if (combinedInferenceChartInstance) {
+                combinedInferenceChartInstance.data.datasets[0].data = []; // Bubbles
+                combinedInferenceChartInstance.data.datasets[1].data = []; // Regression line
+                combinedInferenceChartInstance.update();
+            }
+            return;
+        }
+
+        const { slope, intercept } = linearRegression(dataToDisplay, 'GFLOPs', 'InferenceTime');
+        const rSquared = calculateRSquared(dataToDisplay, 'GFLOPs', 'InferenceTime', slope, intercept);
+        if(rSquaredEl) rSquaredEl.textContent = `R² (${filterType}) = ${rSquared.toFixed(3)}`;
+
+        const gflopsValues = dataToDisplay.map(d => d.GFLOPs);
+        const minGFLOPs = Math.min(...gflopsValues);
+        const maxGFLOPs = Math.max(...gflopsValues);
+
+        const regressionLineData = [];
+        if (dataToDisplay.length >=2 && minGFLOPs !== maxGFLOPs) {
+             regressionLineData.push({ x: minGFLOPs, y: slope * minGFLOPs + intercept });
+             regressionLineData.push({ x: maxGFLOPs, y: slope * maxGFLOPs + intercept });
+        } else if (dataToDisplay.length >= 1) { // Handle case with single point or all same GFLOPs
+            const singleGFLOP = gflopsValues[0]; // Use the first GFLOPs value
+            const yPoint = slope * singleGFLOP + intercept;
+            regressionLineData.push({ x: singleGFLOP - Math.max(1, singleGFLOP*0.1) , y: yPoint}); // Create a small line segment
+            regressionLineData.push({ x: singleGFLOP + Math.max(1, singleGFLOP*0.1), y: yPoint});
+        }
+        regressionLineData.forEach(point => { if (point.y < 0) point.y = 0; });
+
+
+        const bubbleData = dataToDisplay.map(d => ({
+            x: d.GFLOPs,
+            y: d.InferenceTime,
+            r: fixedBubbleRadius, // Using fixed radius as Parameters is not available
+            modelName: d.Model,
+            family: d.Family
+        }));
+
+        if (combinedInferenceChartInstance) {
+            combinedInferenceChartInstance.data.datasets[0].data = bubbleData;
+            combinedInferenceChartInstance.data.datasets[0].backgroundColor = bubbleData.map(d => d.family === 'YOLO' ? 'rgba(59, 130, 246, 0.6)' : 'rgba(16, 185, 129, 0.6)');
+            combinedInferenceChartInstance.data.datasets[0].borderColor = bubbleData.map(d => d.family === 'YOLO' ? 'rgb(37, 99, 235)' : 'rgb(5, 150, 105)');
+            combinedInferenceChartInstance.data.datasets[1].data = regressionLineData;
+            combinedInferenceChartInstance.data.datasets[1].label = regressionLabel;
+            combinedInferenceChartInstance.update();
+        } else {
+            combinedInferenceChartInstance = new Chart(document.getElementById('combinedInferenceBubbleChart'), {
+                type: 'bubble', // Still using bubble type, but with fixed radius
+                data: {
+                    datasets: [
+                        {
+                            label: 'Models (YOLO: Blue, DETR: Green)',
+                            data: bubbleData,
+                            backgroundColor: bubbleData.map(d => d.family === 'YOLO' ? 'rgba(59, 130, 246, 0.6)' : 'rgba(16, 185, 129, 0.6)'),
+                            borderColor: bubbleData.map(d => d.family === 'YOLO' ? 'rgb(37, 99, 235)' : 'rgb(5, 150, 105)'),
+                            borderWidth: 1
+                        },
+                        {
+                            label: regressionLabel,
+                            data: regressionLineData,
+                            type: 'line',
+                            borderColor: 'rgba(75, 75, 75, 0.8)',
+                            borderWidth: 2,
+                            fill: false,
+                            pointRadius: 0,
+                            tension: 0
+                        }
+                    ]
+                },
+                options: {
+                    ...chartJsBaseConfig,
+                    plugins: {
+                        ...chartJsBaseConfig.plugins,
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    if (context.dataset.type === 'line') return null;
+                                    const dp = context.dataset.data[context.dataIndex];
+                                    // Parameters info removed from tooltip as it's not in new CSV
+                                    return `${dp.modelName} (${dp.family}): GFLOPs ${dp.x.toFixed(1)}, Time ${dp.y.toFixed(1)}ms`;
+                                },
+                                title: () => ''
+                            }
+                        },
+                        legend: { display: true, position: 'top' }
+                    },
+                    scales: {
+                        y: { beginAtZero: true, title: { display: true, text: 'Inference Time (ms)', color: '#4B5563', font: { size: 10 } }, ticks: { color: '#4B5563', font: { size: 9 } }, grid: { color: '#E5E7EB' }},
+                        x: { beginAtZero: true, title: { display: true, text: 'GFLOPs (OPS_G)', color: '#4B5563', font: { size: 10 } }, ticks: { color: '#4B5563', font: { size: 9 } }, grid: { color: '#E5E7EB' }}
+                    }
+                }
+            });
+        }
+    }
+    document.querySelectorAll('input[name="inferenceTimeView"]').forEach(radio => {
+        radio.addEventListener('change', (event) => {
+            updateCombinedInferenceChart(event.target.value);
+        });
+    });
+    updateCombinedInferenceChart('all');
+
+
+    const paretoOptimalAllModels = getParetoOptimalModels(allModelsData_RAW);
+    let allModelsChartInstance;
+    const paramScaleFactorAll = 1.5; // This chart still uses allModelsData_RAW which has params
+
+    function updateAllModelsBubbleChart(showParetoOnly = false) {
+        const dataToShow = showParetoOnly ? paretoOptimalAllModels : allModelsData_RAW;
+        allModelsChartInstance.data.datasets[0].data = dataToShow.map(d => ({
+            x: d.gflops, y: d.map, r: d.params * paramScaleFactorAll, modelName: d.label, type: d.type
+        }));
+        allModelsChartInstance.data.datasets[0].backgroundColor = dataToShow.map(d => {
+            if (d.type === "DETR") return 'rgba(16, 185, 129, 0.6)';
+            if (d.type === "YOLO/EDNet") return 'rgba(59, 130, 246, 0.6)';
+            return 'rgba(245, 158, 11, 0.6)';
+        });
+         allModelsChartInstance.data.datasets[0].borderColor = dataToShow.map(d => {
+            if (d.type === "DETR") return 'rgb(5, 150, 105)';
+            if (d.type === "YOLO/EDNet") return 'rgb(37, 99, 235)';
+            return 'rgb(217, 119, 6)';
+        });
+        allModelsChartInstance.update();
+    }
+
+    allModelsChartInstance = new Chart(document.getElementById('allModelsOverviewChart'), {
+        type: 'bubble', data: { datasets: [{
+            label: 'Models (Size ~ Params M)', data: [], backgroundColor: [], borderColor: [], borderWidth: 1
+        }]},
+        options: { ...chartJsBaseConfig, plugins: { ...chartJsBaseConfig.plugins, tooltip: {
+            callbacks: { label: function(context) {
+                const dp = context.dataset.data[context.dataIndex];
+                return `${dp.modelName} (${dp.type}): mAP ${dp.y}%, GFLOPs ${dp.x}, Params ${parseFloat((dp.r / paramScaleFactorAll).toFixed(2))}M`;
+            }, title: () => '' }}, legend: { display: false }
+        }, scales: {
+            y: { beginAtZero: false, min: Math.min(...allModelsData_RAW.map(d=>d.map)) - 5 > 0 ? Math.min(...allModelsData_RAW.map(d=>d.map)) - 2 : 20,
+                title: { display: true, text: 'mAP@0.50 (%)', color: '#4B5563', font: {size: 10}},
+                ticks: { color: '#4B5563', font: {size: 9} }, grid: { color: '#E5E7EB' }
+            },
+            x: {
+                type: 'linear',
+                title: { display: true, text: 'GFLOPs', color: '#4B5563', font: {size: 10}},
+                ticks: { color: '#4B5563', font: {size: 9}, maxRotation: 0, minRotation: 0 },
+                grid: { color: '#E5E7EB' },
+                beginAtZero: true
+            }
+        }}
+    });
+    document.querySelectorAll('input[name="bubbleView"]').forEach(radio => {
+        radio.onchange = (event) => updateAllModelsBubbleChart(event.target.value === 'pareto');
+    });
+    updateAllModelsBubbleChart(false);
+
+    const bibliographyItems = [
+        "L. Jiao and M. I. Abdullah, “YOLO series algorithms in object detection of unmanned aerial vehicles: a survey,” Serv. Oriented Comput. Appl., vol. 18, no. 3, pp. 269–298, Sep. 2024, doi: 10.1007/s11761-024-00388-w.",
+        "Z. Song, Y. Zhang, and A. A. R. M. A. Ebayyeh, “EDNet: Edge-Optimized Small Target Detection in UAV Imagery -- Faster Context Attention, Better Feature Fusion, and Hardware Acceleration,” in 2024 IEEE Smart World Congress (SWC), Dec. 2024, pp. 829–838. doi: 10.1109/SWC62898.2024.00141.",
+        "P. Zhu et al., “VisDrone-DET2018: The Vision Meets Drone Object Detection in Image Challenge Results”.",
+        "L. Chen, J. Hu, X. Li, F. Quan, and H. Chen, “Onboard Real-time Object Detection for UAV with Embedded NPU,” in 2021 IEEE 11th Annual International Conference on CYBER Technology in Automation, Control, and Intelligent Systems (CYBER), Jiaxing, China: IEEE, Jul. 2021, pp. 192–197. doi: 10.1109/CYBER53097.2021.9588193.",
+        "D. Du et al., “VisDrone-DET2019: The Vision Meets Drone Object Detection in Image Challenge Results”.",
+        "J. Wan, B. Zhang, Y. Zhao, Y. Du, and Z. Tong, “VistrongerDet: Stronger Visual Information for Object Detection in VisDrone Images,” in 2021 IEEE/CVF International Conference on Computer Vision Workshops (ICCVW), Montreal, BC, Canada: IEEE, Oct. 2021, pp. 2820–2829. doi: 10.1109/ICCVW54120.2021.00316.",
+        "S. Vaddi, C. Kumar, and A. Jannesari, “Efficient Object Detection Model for Real-Time UAV Applications,” May 30, 2019, arXiv: arXiv:1906.00786. doi: 10.48550/arXiv.1906.00786.",
+        "A. Jain et al., “AI-enabled Object Detection in Unmanned Aerial Vehicles for Edge Computing Applications”.",
+        "M. C. Keles, B. Salmanoglu, M. S. Guzel, B. Gursoy, and G. E. Bostanci, “Evaluation of YOLO Models with Sliced Inference for Small Object Detection,” Mar. 09, 2022, arXiv: arXiv:2203.04799. doi: 10.48550/arXiv.2203.04799.",
+        "N. Camarlinghi, B. Michelozzi, G. Martino, A. Di Tommaso, G. Fontanelli, and A. Masini, “Drone-based monitoring on the edge using a high-resolution payload,” in Autonomous Systems for Security and Defence, J. Dijk and J. L. Sanchez-Lopez, Eds., Edinburgh, United Kingdom: SPIE, Nov. 2024, p. 14. doi: 10.1117/12.3031453.",
+        "L. Xiao, W. Li, S. Yao, H. Liu, and D. Ren, “High-precision and lightweight small-target detection algorithm for low-cost edge intelligence,” Sci. Rep., vol. 14, p. 23542, Oct. 2024, doi: 10.1038/s41598-024-75243-1.",
+        "Y. Kong, X. Shang, and S. Jia, “Drone-DETR: Efficient Small Object Detection for Remote Sensing Image Using Enhanced RT-DETR Model,” Sensors, vol. 24, no. 17, p. 5496, Aug. 2024, doi: 10.3390/s24175496.",
+        "X. Wang, Y. Peng, and C. Shen, “Efficient Feature Fusion for UAV Object Detection,” Feb. 03, 2025, arXiv: arXiv:2501.17983. doi: 10.48550/arXiv.2501.17983.",
+        "H. Zhang, K. Liu, Z. Gan, and G.-N. Zhu, “UAV-DETR: Efficient End-to-End Object Detection for Unmanned Aerial Vehicle Imagery,” Jan. 03, 2025, arXiv: arXiv:2501.01855. doi: 10.48550/arXiv.2501.01855.",
+        "L. Wenbin, “An Efficient Aerial Image Detection with Variable Receptive Fields,” Apr. 21, 2025, arXiv: arXiv:2504.15165. doi: 10.48550/arXiv.2504.15165.",
+        "L. Xiao, W. Li, S. Yao, H. Liu, and D. Ren, “High-precision and lightweight small-target detection algorithm for low-cost edge intelligence,” Sci. Rep., vol. 14, p. 23542, Oct. 2024, doi: 10.1038/s41598-024-75243-1.",
+        "D. Chen and L. Zhang, “SL-YOLO: A Stronger and Lighter Drone Target Detection Model,” Jan. 13, 2025, arXiv: arXiv:2411.11477. doi: 10.48550/arXiv.2411.11477.",
+        "X. Tang et al., “YOLO-Ant: A Lightweight Detector via Depthwise Separable Convolutional and Large Kernel Design for Antenna Interference Source Detection,” Feb. 20, 2024, arXiv: arXiv:2402.12641. doi: 10.48550/arXiv.2402.12641.",
+        "H. Li and J. Wu, “LSOD-YOLOv8s: A Lightweight Small Object Detection Model Based on YOLOv8 for UAV Aerial Images,” vol. 32, no. 11, 2024.",
+        "C. Yang, Z. Huang, and N. Wang, “QueryDet: Cascaded Sparse Query for Accelerating High-Resolution Small Object Detection,” in 2022 IEEE/CVF Conference on Computer Vision and Pattern Recognition (CVPR), New Orleans, LA, USA: IEEE, Jun. 2022, pp. 13658–13667. doi: 10.1109/CVPR52688.2022.01330.",
+        "K. Choi, S. M. Wi, H. G. Jung, and J. K. Suhr, “Simplification of Deep Neural Network-Based Object Detector for Real-Time Edge Computing,” Sensors, vol. 23, no. 7, p. 3777, Apr. 2023, doi: 10.3390/s23073777.",
+        "Y. Miao, X. Wang, N. Zhang, K. Wang, L. Shao, and Q. Gao, “Research on a UAV-View Object-Detection Method Based on YOLOv7-Tiny”.",
+        "D. Shan, Z. Yang, X. Wang, X. Meng, and G. Zhang, “An Aerial Image Detection Algorithm Based on Improved YOLOv5,” Sensors, vol. 24, no. 8, p. 2619, Apr. 2024, doi: 10.3390/s24082619.",
+        "J. Mei and W. Zhu, “BGF-YOLOv10: Small Object Detection Algorithm from Unmanned Aerial Vehicle Perspective Based on Improved YOLOv10”.",
+        "J. An, D. Lee, M. D. Putro, and B. Kim, “DCE-YOLOv8: Lightweight and Accurate Object Detection for Drone Vision,” IEEE Access, vol. PP, pp. 1–1, Jan. 2024, doi: 10.1109/ACCESS.2024.3481410.",
+        "H. Li and J. Wu, “LSOD-YOLOv8s: A Lightweight Small Object Detection Model Based on YOLOv8 for UAV Aerial Images,” vol. 32, no. 11, 2024.",
+        "Y. Tan, “DBYOLOv8: Dual-Branch YOLOv8 Network for Small Object Detection on Drone Image,” Int. J. Adv. Comput. Sci. Appl., vol. 16, no. 1, 2025.",
+        "W. Hua and Q. Chen, “A survey of small object detection based on deep learning in aerial images,” Artif. Intell. Rev., vol. 58, Mar. 2025, doi: 10.1007/s10462-025-11150-9.",
+        "Y. Zhao et al., “DETRs Beat YOLOs on Real-time Object Detection,” Apr. 03, 2024, arXiv: arXiv:2304.08069. doi: 10.48550/arXiv.2304.08069.",
+        "C.-Y. Wang, I.-H. Yeh, and H.-Y. M. Liao, “YOLOv9: Learning What You Want to Learn Using Programmable Gradient Information,” Feb. 29, 2024, arXiv: arXiv:2402.13616. doi: 10.48550/arXiv.2402.13616.",
+        "M. Hussain, “YOLOv5, YOLOv8 and YOLOv10: The Go-To Detectors for Real-time Vision,” Jul. 03, 2024, arXiv: arXiv:2407.02988. doi: 10.48550/arXiv.2407.02988.",
+        "S. Lu, H. Lu, J. Dong, and S. Wu, “Object Detection for UAV Aerial Scenarios Based on Vectorized IOU,” Sensors, vol. 23, no. 6, p. 3061, Mar. 2023, doi: 10.3390/s23063061.",
+        "S. Tang, S. Zhang, and Y. Fang, “HIC-YOLOv5: Improved YOLOv5 For Small Object Detection,” Nov. 09, 2023, arXiv: arXiv:2309.16393. doi: 10.48550/arXiv.2309.16393.",
+        "“An algorithm for detecting dense small objects in aerial photography based on coordinate position attention module - Wu - 2024 - IET Image Processing - Wiley Online Library.” Accessed: May 03, 2025. [Online]. Available: https://ietresearch.onlinelibrary.wiley.com/doi/full/10.1049/ipr2.13061",
+        "Y. Li, Q. Fan, H. Huang, Z. Han, and Q. Gu, “A Modified YOLOv8 Detection Network for UAV Aerial Image Recognition,” Drones, vol. 7, no. 5, Art. no. 5, May 2023, doi: 10.3390/drones7050304.",
+        "X. Li, F. Wang, W. Wang, Y. Han, and J. Zhang, “DM-YOLOX aerial object detection method with intensive attention mechanism,” J. Supercomput., vol. 80, pp. 1–23, Feb. 2024, doi: 10.1007/s11227-024-05944-x.",
+        "J. Wang, W. Liu, W. Zhang, and B. Liu, “LV-YOLOv5: A light-weight object detector of Vit on Drone-captured Scenarios,” 2022 16th IEEE Int. Conf. Signal Process. ICSP, pp. 178–183, Oct. 2022, doi: 10.1109/ICSP56322.2022.9965217.",
+        "L. Zhang, N. Xiong, X. Pan, X. Yue, P. Wu, and C. Guo, “Improved Object Detection Method Utilizing YOLOv7-Tiny for Unmanned Aerial Vehicle Photographic Imagery,” Algorithms, vol. 16, no. 5, Art. no. 5, May 2023, doi: 10.3390/alg16050233."
+    ];
+
+    const bibliographyListEl = document.getElementById('bibliographyList');
+    const toggleBibliographyBtn = document.getElementById('toggleBibliography');
+    const itemsToShowInitially = 4;
+    let allItemsVisible = false;
+
+    function displayBibliographyItems() {
+        bibliographyListEl.innerHTML = '';
+        const itemsToDisplay = allItemsVisible ? bibliographyItems.length : itemsToShowInitially;
+
+        for (let i = 0; i < itemsToDisplay; i++) {
+            if (bibliographyItems[i]) {
+                const itemEl = document.createElement('div');
+                itemEl.classList.add('bibliography-item');
+                itemEl.setAttribute('data-number', `[${i + 1}]`);
+                itemEl.textContent = bibliographyItems[i];
+                bibliographyListEl.appendChild(itemEl);
+            }
+        }
+        toggleBibliographyBtn.textContent = allItemsVisible ? 'Show Less' : 'Show More';
+        toggleBibliographyBtn.style.display = bibliographyItems.length <= itemsToShowInitially ? 'none' : 'block';
+    }
+
+    toggleBibliographyBtn.addEventListener('click', () => {
+        allItemsVisible = !allItemsVisible;
+        displayBibliographyItems();
+    });
+
+    displayBibliographyItems();
+
+
+</script>
+</body>
+</html>
