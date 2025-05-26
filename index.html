@@ -241,8 +241,8 @@
             <div class="card">
                  <h3 class="chart-title">All Models: mAP vs. GFLOPs (Bubble Size: Parameters M)</h3>
                  <div id="allModelsToggleControls" class="toggle-controls">
-                    <label><input type="radio" name="bubbleView" value="all" checked> Show All Models</label>
-                    <label><input type="radio" name="bubbleView" value="pareto"> Show Pareto Optimal Only</label>
+                    <label><input type="radio" name="bubbleView" value="all"> Show All Models</label>
+                    <label><input type="radio" name="bubbleView" value="pareto" checked> Show Pareto Optimal Only</label>
                  </div>
                 <div class="large-chart-container">
                     <canvas id="allModelsOverviewChart"></canvas>
@@ -260,8 +260,8 @@
             <div class="card">
                 <h3 class="chart-title">All Models: mAP, Parameters & GFLOPs Comparison</h3>
                 <div id="yoloVsDetrToggleControls" class="toggle-controls">
-                    <label><input type="radio" name="yoloDetrView" value="all" checked> Show All Models</label>
-                    <label><input type="radio" name="yoloDetrView" value="pareto"> Show Pareto Optimal Models</label>
+                    <label><input type="radio" name="yoloDetrView" value="all"> Show All Models</label>
+                    <label><input type="radio" name="yoloDetrView" value="pareto" checked> Show Pareto Optimal Models</label>
                 </div>
                 <div class="chart-container">
                     <canvas id="yoloVsDetrChart"></canvas>
@@ -553,7 +553,7 @@
     document.querySelectorAll('input[name="yoloDetrView"]').forEach(radio => {
         radio.onchange = (event) => updateYoloVsDetrChart(event.target.value === 'pareto');
     });
-    updateYoloVsDetrChart(false);
+    updateYoloVsDetrChart(true);
 
     // NEW CSV data from user upload (mAP_HW_Accuracy_Comparison.csv)
     const newDataCSV = `Network_Name_Clean,mAP,HW_Accuracy,HW_Accuracy_minus_mAP,Inference_Time_ms,OPS_G
@@ -879,7 +879,7 @@ yolov3,38.42,38.29,-0.13,47.62,158.1`;
     document.querySelectorAll('input[name="bubbleView"]').forEach(radio => {
         radio.onchange = (event) => updateAllModelsBubbleChart(event.target.value === 'pareto');
     });
-    updateAllModelsBubbleChart(false);
+    updateAllModelsBubbleChart(true);
 
     const bibliographyItems = [
         "L. Jiao and M. I. Abdullah, “YOLO series algorithms in object detection of unmanned aerial vehicles: a survey,” Serv. Oriented Comput. Appl., vol. 18, no. 3, pp. 269–298, Sep. 2024, doi: 10.1007/s11761-024-00388-w.",
